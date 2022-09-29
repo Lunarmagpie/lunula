@@ -45,8 +45,9 @@ impl Window {
         Ok(())
     }
 
-    pub fn as_floating(&self, conn: &mut xcb::Connection) -> xcb::Result<()> {
-        let cookie = conn.send_request_checked(&x::GrabButton {
+    pub fn to_floating(&self, conn: &mut xcb::Connection) -> xcb::Result<()> {
+        // Drag windows
+        let drag_cookie = conn.send_request_checked(&x::GrabButton {
             owner_events: false,
             grab_window: self.window,
             event_mask: x::EventMask::BUTTON_PRESS
@@ -56,15 +57,32 @@ impl Window {
             keyboard_mode: x::GrabMode::Async,
             confine_to: xcb::Xid::none(),
             cursor: xcb::Xid::none(),
-            button: x::ButtonIndex::N1,
-            modifiers: x::ModMask::N1,
+            button: crate::config::DRAG_BUTTON,
+            modifiers: crate::config::MOD_KEY,
         });
-        conn.check_request(cookie)?;
+
+        // Drag windows
+        let resize_cookie = conn.send_request_checked(&x::GrabButton {
+            owner_events: false,
+            grab_window: self.window,
+            event_mask: x::EventMask::BUTTON_PRESS
+                | x::EventMask::BUTTON_RELEASE
+                | x::EventMask::BUTTON_MOTION,
+            pointer_mode: x::GrabMode::Async,
+            keyboard_mode: x::GrabMode::Async,
+            confine_to: xcb::Xid::none(),
+            cursor: xcb::Xid::none(),
+            button: crate::config::RESIZE_BUTTON,
+            modifiers: crate::config::MOD_KEY,
+        });
+
+        conn.check_request(drag_cookie)?;
+        conn.check_request(resize_cookie)?;
 
         Ok(())
     }
 
-    pub fn as_tiled(&self, conn: xcb::Connection) -> xcb::Result<()> {
+    pub fn to_tiled(&self, conn: xcb::Connection) -> xcb::Result<()> {
         let cookie = conn.send_request_checked(&x::UngrabButton {
             grab_window: self.window,
             button: x::ButtonIndex::N1,

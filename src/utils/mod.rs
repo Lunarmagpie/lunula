@@ -1,4 +1,4 @@
-use std::ops::{Add, Sub};
+use std::ops;
 
 #[derive(Debug, Copy, Clone)]
 pub struct Vec2D {
@@ -8,11 +8,26 @@ pub struct Vec2D {
 
 impl Vec2D {
     pub fn new(x: i16, y: i16) -> Self {
-        Vec2D { x, y }
+        Self { x, y }
     }
 }
 
-impl Add for Vec2D {
+impl Vec2D {
+    pub fn abs(&self) -> Self {
+        Self {
+            x: self.x.abs(),
+            y: self.y.abs(),
+        }
+    }
+    pub fn max(&self, other: Self) -> Self {
+        Self {
+            x: self.x.max(other.x),
+            y: self.y.max(other.y),
+        }
+    }
+}
+
+impl ops::Add for Vec2D {
     type Output = Self;
 
     fn add(self, other: Self) -> Self {
@@ -23,7 +38,7 @@ impl Add for Vec2D {
     }
 }
 
-impl Sub for Vec2D {
+impl ops::Sub for Vec2D {
     type Output = Self;
 
     fn sub(self, other: Self) -> Self {

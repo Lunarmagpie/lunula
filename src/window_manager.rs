@@ -1,8 +1,8 @@
 use xcb;
 use xcb::x;
 
-use crate::window;
 use crate::utils::Vec2D;
+use crate::window;
 
 pub struct WindowManager {
     conn: xcb::Connection,
@@ -53,7 +53,6 @@ impl WindowManager {
                     self.drag_start_frame_pos = Vec2D::new(resp.x(), resp.y());
                 }
                 xcb::Event::X(x::Event::ConfigureRequest(ev)) => {
-                    print!("here");
                     let cookie = self.conn.send_request_checked(&x::ConfigureWindow {
                         window: ev.window(),
                         value_list: &[
@@ -62,30 +61,44 @@ impl WindowManager {
                             x::ConfigWindow::Width(ev.width() as u32),
                             x::ConfigWindow::Height(ev.height() as u32),
                             x::ConfigWindow::BorderWidth(ev.border_width() as u32),
-                            // x::ConfigWindow::Sibling(ev.sibling()),
+                            // x::ConfigWindow::Sibling(ev.above()),
                             x::ConfigWindow::StackMode(ev.stack_mode()),
                         ],
                     });
                     self.conn.check_request(cookie)?;
                 }
                 xcb::Event::X(x::Event::MotionNotify(ev)) => {
-                    let root_pos = Vec2D::new(ev.root_x(), ev.root_y());
+                    let mouse_pos = Vec2D::new(ev.root_x(), ev.root_y());
 
-                    let window_pos = self.drag_start_frame_pos + root_pos - self.drag_start_pos;
+                    if ev.state().contains(crate::config::DRAG_BUTTON_MASK) {
+                        let window_pos =
+                            self.drag_start_frame_pos + mouse_pos - self.drag_start_pos;
 
-                    let cookie = self.conn.send_request_checked(&x::ConfigureWindow {
-                        window: ev.event(),
-                        value_list: &[
-                            x::ConfigWindow::X(window_pos.x as i32),
-                            x::ConfigWindow::Y(window_pos.y as i32),
-                        ],
-                    });
-                    self.conn.check_request(cookie)?;
+                        let cookie = self.conn.send_request_checked(&x::ConfigureWindow {
+                            window: ev.event(),
+                            value_list: &[
+                                x::ConfigWindow::X(window_pos.x as i32),
+                                x::ConfigWindow::Y(window_pos.y as i32),
+                            ],
+                        });
+                        self.conn.check_request(cookie)?;
+                    } else if ev.state().contains(crate::config::RESIZE_BUTTON_MASK) {
+                        let size = (mouse_pos - self.drag_start_frame_pos).max(Vec2D::new(32, 32));
+
+                        let cookie = self.conn.send_request_checked(&x::ConfigureWindow {
+                            window: ev.event(),
+                            value_list: &[
+                                x::ConfigWindow::Width(size.x as u32),
+                                x::ConfigWindow::Height(size.y as u32),
+                            ],
+                        });
+                        self.conn.check_request(cookie)?;
+                    }
                 }
                 xcb::Event::X(x::Event::MapRequest(ev)) => {
                     let w = window::Window::new(ev.window());
                     w.map(&mut self.conn, self.root)?;
-                    w.as_floating(&mut self.conn)?;
+                    w.to_floating(&mut self.conn)?;
                 }
                 _ => {}
             }
