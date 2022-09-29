@@ -1,0 +1,94 @@
+use xcb;
+use xcb::x;
+
+use crate::window;
+use crate::utils::Vec2D;
+
+pub struct WindowManager {
+    conn: xcb::Connection,
+    root: x::Window,
+
+    drag_start_pos: Vec2D,
+    drag_start_frame_pos: Vec2D,
+}
+
+impl WindowManager {
+    pub fn new() -> xcb::Result<Self> {
+        // Connect to the X server.
+        let (conn, screen_num) = xcb::Connection::connect(None)?;
+        let values = [x::Cw::EventMask(
+            x::EventMask::SUBSTRUCTURE_NOTIFY | x::EventMask::SUBSTRUCTURE_REDIRECT,
+        )];
+
+        let setup = conn.get_setup();
+        let root = setup.roots().nth(screen_num as usize).unwrap().root();
+
+        let cookie = conn.send_request_checked(&x::ChangeWindowAttributes {
+            window: root,
+            value_list: &values,
+        });
+
+        conn.check_request(cookie)
+            .expect("Could not start lunula window manager! Is one already running?");
+
+        Ok(WindowManager {
+            conn,
+            root,
+            drag_start_pos: Vec2D::new(0, 0),
+            drag_start_frame_pos: Vec2D::new(0, 0),
+        })
+    }
+
+    pub fn run(&mut self) -> xcb::Result<()> {
+        loop {
+            match self.conn.wait_for_event()? {
+                xcb::Event::X(x::Event::ButtonPress(ev)) => {
+                    let cookie = self.conn.send_request(&x::GetGeometry {
+                        drawable: x::Drawable::Window(ev.event()),
+                    });
+
+                    let resp = self.conn.wait_for_reply(cookie)?;
+
+                    self.drag_start_pos = Vec2D::new(ev.root_x(), ev.root_y());
+                    self.drag_start_frame_pos = Vec2D::new(resp.x(), resp.y());
+                }
+                xcb::Event::X(x::Event::ConfigureRequest(ev)) => {
+                    print!("here");
+                    let cookie = self.conn.send_request_checked(&x::ConfigureWindow {
+                        window: ev.window(),
+                        value_list: &[
+                            x::ConfigWindow::X(ev.x() as i32),
+                            x::ConfigWindow::Y(ev.y() as i32),
+                            x::ConfigWindow::Width(ev.width() as u32),
+                            x::ConfigWindow::Height(ev.height() as u32),
+                            x::ConfigWindow::BorderWidth(ev.border_width() as u32),
+                            // x::ConfigWindow::Sibling(ev.sibling()),
+                            x::ConfigWindow::StackMode(ev.stack_mode()),
+                        ],
+                    });
+                    self.conn.check_request(cookie)?;
+                }
+                xcb::Event::X(x::Event::MotionNotify(ev)) => {
+                    let root_pos = Vec2D::new(ev.root_x(), ev.root_y());
+
+                    let window_pos = self.drag_start_frame_pos + root_pos - self.drag_start_pos;
+
+                    let cookie = self.conn.send_request_checked(&x::ConfigureWindow {
+                        window: ev.event(),
+                        value_list: &[
+                            x::ConfigWindow::X(window_pos.x as i32),
+                            x::ConfigWindow::Y(window_pos.y as i32),
+                        ],
+                    });
+                    self.conn.check_request(cookie)?;
+                }
+                xcb::Event::X(x::Event::MapRequest(ev)) => {
+                    let w = window::Window::new(ev.window());
+                    w.map(&mut self.conn, self.root)?;
+                    w.as_floating(&mut self.conn)?;
+                }
+                _ => {}
+            }
+        }
+    }
+}
