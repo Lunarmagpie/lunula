@@ -13,12 +13,6 @@ impl Vec2D {
 }
 
 impl Vec2D {
-    pub fn abs(&self) -> Self {
-        Self {
-            x: self.x.abs(),
-            y: self.y.abs(),
-        }
-    }
     pub fn max(&self, other: Self) -> Self {
         Self {
             x: self.x.max(other.x),

@@ -14,7 +14,6 @@ impl Window {
         let attr_cookie = conn.send_request_checked(&x::ChangeWindowAttributes {
             window: self.window,
             value_list: &[
-                x::Cw::BackPixel(0xffffff),
                 x::Cw::BorderPixel(0x0000ff),
                 x::Cw::EventMask(
                     x::EventMask::SUBSTRUCTURE_NOTIFY | x::EventMask::SUBSTRUCTURE_REDIRECT,

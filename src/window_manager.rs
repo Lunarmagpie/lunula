@@ -1,10 +1,14 @@
 use xcb;
-use xcb::x;
+use xcb::{x, Xid};
 
 use crate::utils::Vec2D;
 use crate::window;
+use crate::virtual_desktop::DesktopManager;
 
 pub struct WindowManager {
+    pub desktops: DesktopManager,
+    focused_desktop_id: i64,
+
     conn: xcb::Connection,
     root: x::Window,
 
@@ -16,24 +20,33 @@ impl WindowManager {
     pub fn new() -> xcb::Result<Self> {
         // Connect to the X server.
         let (conn, screen_num) = xcb::Connection::connect(None)?;
-        let values = [x::Cw::EventMask(
-            x::EventMask::SUBSTRUCTURE_NOTIFY | x::EventMask::SUBSTRUCTURE_REDIRECT,
-        )];
 
         let setup = conn.get_setup();
         let root = setup.roots().nth(screen_num as usize).unwrap().root();
 
         let cookie = conn.send_request_checked(&x::ChangeWindowAttributes {
             window: root,
-            value_list: &values,
+
+            value_list: &[
+                x::Cw::EventMask(
+                    x::EventMask::SUBSTRUCTURE_NOTIFY | x::EventMask::SUBSTRUCTURE_REDIRECT,
+                ),
+                x::Cw::Cursor(Xid::none()),
+            ],
         });
 
         conn.check_request(cookie)
             .expect("Could not start lunula window manager! Is one already running?");
 
+        let mut desktops = DesktopManager::new();
+        desktops.create_virtual_desktop(0);
+        desktops.create_virtual_desktop(1);
+
         Ok(WindowManager {
             conn,
             root,
+            desktops: desktops,
+            focused_desktop_id: 0,
             drag_start_pos: Vec2D::new(0, 0),
             drag_start_frame_pos: Vec2D::new(0, 0),
         })
@@ -60,8 +73,7 @@ impl WindowManager {
                             x::ConfigWindow::Y(ev.y() as i32),
                             x::ConfigWindow::Width(ev.width() as u32),
                             x::ConfigWindow::Height(ev.height() as u32),
-                            x::ConfigWindow::BorderWidth(ev.border_width() as u32),
-                            // x::ConfigWindow::Sibling(ev.above()),
+                            x::ConfigWindow::BorderWidth(crate::config::BORDER_WIDTH as u32),
                             x::ConfigWindow::StackMode(ev.stack_mode()),
                         ],
                     });
