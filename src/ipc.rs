@@ -1,3 +1,4 @@
+use std::ops::Deref;
 use std::{fs, cell, rc};
 use std::io::{BufRead, BufReader};
 use std::os::unix::net::{UnixListener, UnixStream};
@@ -17,6 +18,9 @@ pub fn create_socket(wm: sync::Arc<sync::RwLock<WindowManager>>) {
     match fs::remove_file("/tmp/lunula-socket.socket") {
         _ => (), // I dont care if this fails.
     }
+
+
+    let deref_wm = wm.read().expect("Could not deref window manager.");
 
     let listener = match UnixListener::bind("/tmp/lunula-socket.socket") {
         Ok(sock) => sock,
