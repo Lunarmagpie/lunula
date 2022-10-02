@@ -35,9 +35,6 @@ fn main() -> xcb::Result<()> {
 
     println!("Starting Lunula!");
 
-    let k = wm.write();
-    match k {
-        Ok(mut wm_) => wm_.run(),
-        Err(_) => panic!("Sussy!"),
-    }
+    window_manager::run(wm)
+
 }

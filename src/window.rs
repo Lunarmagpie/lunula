@@ -2,7 +2,7 @@ use xcb::x;
 
 // Window that is tracked by the window manager
 pub struct Window {
-    window: x::Window,
+    pub window: x::Window,
 }
 
 impl Window {

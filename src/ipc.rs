@@ -1,26 +1,35 @@
-use std::ops::Deref;
-use std::{fs, cell, rc};
+use std::fs;
 use std::io::{BufRead, BufReader};
 use std::os::unix::net::{UnixListener, UnixStream};
-use std::thread;
 use std::sync;
+use std::thread;
 
 use crate::window_manager::WindowManager;
 
-fn handle_client(stream: UnixStream) {
+fn handle_client(wm: sync::Arc<sync::RwLock<WindowManager>>, stream: UnixStream) {
     let stream = BufReader::new(stream);
+
     for line in stream.lines() {
         println!("{}", line.unwrap());
     }
+
+    println!("here1");
+    let wm = &mut *wm.write().unwrap();
+    println!("here2");
+
+    let desktops = &mut wm.desktops;
+    let conn = &wm.conn;
+    println!("here3");
+
+    let next = desktops.next(0).expect("Could not unwrap.");
+    println!("here4");
+    desktops.focus(next, conn);
 }
 
 pub fn create_socket(wm: sync::Arc<sync::RwLock<WindowManager>>) {
     match fs::remove_file("/tmp/lunula-socket.socket") {
         _ => (), // I dont care if this fails.
     }
-
-
-    let deref_wm = wm.read().expect("Could not deref window manager.");
 
     let listener = match UnixListener::bind("/tmp/lunula-socket.socket") {
         Ok(sock) => sock,
@@ -33,7 +42,8 @@ pub fn create_socket(wm: sync::Arc<sync::RwLock<WindowManager>>) {
     for stream in listener.incoming() {
         match stream {
             Ok(stream) => {
-                thread::spawn(|| handle_client(stream));
+                let clone = wm.clone();
+                thread::spawn(move || handle_client(clone, stream));
             }
             Err(err) => {
                 println!("Error: {}", err);
