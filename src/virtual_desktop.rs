@@ -6,8 +6,8 @@ use crate::bsp::Bsp;
 use crate::window::Window;
 
 pub struct DesktopManager {
+    pub focused_desktop_id: i64,
     desktops: HashMap<i64, VirtualDesktop>,
-    focused_desktop_id: i64,
 }
 
 impl DesktopManager {
@@ -21,33 +21,50 @@ impl DesktopManager {
         self.desktops.insert(id, VirtualDesktop::new());
     }
 
-    pub fn next(&self, focused: i64) -> Option<i64> {
+    pub fn add_window(&mut self, window: Window) {
+        let desktop = &mut self.desktops.get_mut(&self.focused_desktop_id).unwrap();
+        desktop.windows.push(window);
+    }
+
+    pub fn next(&self, focused: i64) -> i64 {
         let mut is_next = false;
         for desktop in self.desktops.keys() {
             if is_next {
-                return Some(*desktop);
+                return *desktop;
             } else {
                 is_next = &focused == desktop;
             }
         }
-        return None;
+        *self
+            .desktops
+            .keys()
+            .nth(0)
+            .expect("There are no virtual desktops.")
     }
 
-    pub fn prev(&self, focused: i64) -> Option<i64> {
-        let mut last = self.desktops.keys().last()?;
+    pub fn prev(&self, focused: i64) -> i64 {
+        let mut last = self
+            .desktops
+            .keys()
+            .last()
+            .expect("There are no virtual desktops.");
         for desktop in self.desktops.keys() {
             if desktop == &focused {
-                return Some(*last);
+                return *last;
             } else {
                 last = desktop;
             }
         }
-        return None;
+        *self
+            .desktops
+            .keys()
+            .last()
+            .expect("There are no virtual desktops.")
     }
 
     pub fn focus(&mut self, id: i64, conn: &xcb::Connection) {
-        println!("{}", id);
-        self.desktops[&id].hide(conn);
+        self.desktops[&self.focused_desktop_id].hide(conn);
+        self.desktops[&id].show(conn);
         self.focused_desktop_id = id
     }
 }
@@ -66,7 +83,6 @@ impl VirtualDesktop {
     }
 
     pub fn hide(&self, conn: &xcb::Connection) {
-        println!("here");
         let mut cookies = Vec::new();
         for window in &self.windows {
             cookies.push(conn.send_request_checked(&x::UnmapWindow {

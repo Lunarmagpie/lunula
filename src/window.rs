@@ -10,7 +10,7 @@ impl Window {
         Window { window }
     }
 
-    pub fn map(&self, conn: &mut xcb::Connection, root: x::Window) -> xcb::Result<()> {
+    pub fn map(&self, conn: &xcb::Connection, root: x::Window) -> xcb::Result<()> {
         let attr_cookie = conn.send_request_checked(&x::ChangeWindowAttributes {
             window: self.window,
             value_list: &[
@@ -44,7 +44,7 @@ impl Window {
         Ok(())
     }
 
-    pub fn to_floating(&self, conn: &mut xcb::Connection) -> xcb::Result<()> {
+    pub fn to_floating(&self, conn: &xcb::Connection) -> xcb::Result<()> {
         // Drag windows
         let drag_cookie = conn.send_request_checked(&x::GrabButton {
             owner_events: false,

@@ -6,27 +6,27 @@ use std::thread;
 
 use crate::window_manager::WindowManager;
 
-fn handle_client(wm: sync::Arc<sync::RwLock<WindowManager>>, stream: UnixStream) {
+fn handle_client(
+    wm: sync::Arc<sync::RwLock<WindowManager>>,
+    conn: &xcb::Connection,
+    stream: UnixStream,
+) {
     let stream = BufReader::new(stream);
 
-    for line in stream.lines() {
-        println!("{}", line.unwrap());
-    }
-
-    println!("here1");
     let wm = &mut *wm.write().unwrap();
-    println!("here2");
 
     let desktops = &mut wm.desktops;
-    let conn = &wm.conn;
-    println!("here3");
 
-    let next = desktops.next(0).expect("Could not unwrap.");
-    println!("here4");
-    desktops.focus(next, conn);
+    for line in stream.lines() {
+        if line.unwrap().contains("left") {
+            desktops.focus(desktops.prev(desktops.focused_desktop_id), conn);
+        }else {
+            desktops.focus(desktops.next(desktops.focused_desktop_id), conn);
+        }
+    }
 }
 
-pub fn create_socket(wm: sync::Arc<sync::RwLock<WindowManager>>) {
+pub fn create_socket(wm: sync::Arc<sync::RwLock<WindowManager>>, conn: sync::Arc<xcb::Connection>) {
     match fs::remove_file("/tmp/lunula-socket.socket") {
         _ => (), // I dont care if this fails.
     }
@@ -43,7 +43,8 @@ pub fn create_socket(wm: sync::Arc<sync::RwLock<WindowManager>>) {
         match stream {
             Ok(stream) => {
                 let clone = wm.clone();
-                thread::spawn(move || handle_client(clone, stream));
+                let clone_conn = conn.clone();
+                thread::spawn(move || handle_client(clone, &*clone_conn, stream));
             }
             Err(err) => {
                 println!("Error: {}", err);

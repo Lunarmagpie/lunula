@@ -28,13 +28,16 @@ mod config {
 use window_manager::WindowManager;
 
 fn main() -> xcb::Result<()> {
-    let wm = sync::Arc::new(sync::RwLock::new(WindowManager::new()?));
+    let (wm, conn) = WindowManager::new()?;
+
+    let wm = sync::Arc::new(sync::RwLock::new(wm));
+    let conn = sync::Arc::new(conn);
 
     let inner = wm.clone();
-    thread::spawn(|| ipc::create_socket(inner));
+    let clone_conn = conn.clone();
+    thread::spawn(|| ipc::create_socket(inner, clone_conn));
 
     println!("Starting Lunula!");
 
-    window_manager::run(wm)
-
+    window_manager::run(wm, &*conn)
 }
