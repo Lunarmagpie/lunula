@@ -26,6 +26,11 @@ impl DesktopManager {
         desktop.windows.push(window);
     }
 
+    pub fn kill(&mut self, window: x::Window) {
+        let desktop = &mut self.desktops.get_mut(&self.focused_desktop_id).unwrap();
+        desktop.windows = desktop.windows.drain_filter(|x| x.window != window).collect();
+    }
+
     pub fn next(&self, focused: i64) -> i64 {
         let mut is_next = false;
         for desktop in self.desktops.keys() {

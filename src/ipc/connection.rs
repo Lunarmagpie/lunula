@@ -1,5 +1,5 @@
 use std::fs;
-use std::io::{BufRead, BufReader, Read};
+use std::io::{BufReader, Read};
 use std::os::unix::net::{UnixListener, UnixStream};
 use std::sync;
 use std::thread;
@@ -15,7 +15,6 @@ fn handle_client(
 ) {
     let stream = BufReader::new(stream);
     let wm = &mut *wm.write().unwrap();
-    let desktops = &mut wm.desktops;
 
     let mut buf = BufReader::new(stream);
     let mut command = String::new();

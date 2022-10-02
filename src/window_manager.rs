@@ -14,7 +14,7 @@ pub struct WindowManager {
     drag_start_frame_pos: Vec2D,
 }
 
-impl WindowManager{
+impl WindowManager {
     pub fn new() -> xcb::Result<(Self, xcb::Connection)> {
         // Connect to the X server.
         let (conn, screen_num) = xcb::Connection::connect(None)?;
@@ -114,6 +114,7 @@ pub fn run(wm: sync::Arc<sync::RwLock<WindowManager>>, conn: &xcb::Connection) -
                 w.to_floating(&conn)?;
                 wm.desktops.add_window(w);
             }
+            xcb::Event::X(x::Event::DestroyNotify(ev)) => wm.desktops.kill(ev.window()),
             _ => {}
         }
     }

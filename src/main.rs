@@ -1,4 +1,5 @@
 #![feature(get_mut_unchecked)]
+#![feature(drain_filter)]
 
 mod bsp;
 mod ipc;
