@@ -1,8 +1,10 @@
 use std::fs;
-use std::io::{BufRead, BufReader};
+use std::io::{BufRead, BufReader, Read};
 use std::os::unix::net::{UnixListener, UnixStream};
 use std::sync;
 use std::thread;
+
+use crate::ipc::commands::handle_command;
 
 use crate::window_manager::WindowManager;
 
@@ -12,18 +14,20 @@ fn handle_client(
     stream: UnixStream,
 ) {
     let stream = BufReader::new(stream);
-
     let wm = &mut *wm.write().unwrap();
-
     let desktops = &mut wm.desktops;
 
-    for line in stream.lines() {
-        if line.unwrap().contains("left") {
-            desktops.focus(desktops.prev(desktops.focused_desktop_id), conn);
-        }else {
-            desktops.focus(desktops.next(desktops.focused_desktop_id), conn);
-        }
-    }
+    let mut buf = BufReader::new(stream);
+    let mut command = String::new();
+    match buf.read_to_string(&mut command) {
+        Ok(_) => (),
+        Err(err) => println!("{}", err),
+    };
+    
+    match handle_command(command.split_whitespace().collect(), wm, conn) {
+        Ok(_) => (),
+        Err(s) => println!("{}", s)
+    };
 }
 
 pub fn create_socket(wm: sync::Arc<sync::RwLock<WindowManager>>, conn: sync::Arc<xcb::Connection>) {

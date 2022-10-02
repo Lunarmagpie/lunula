@@ -7,3 +7,12 @@ Built using xcb: https://docs.rs/xcb/latest/xcb/
 
 ## Features
 Floatings windows. Can be resized and moved. ALT is used as the mod key.
+
+
+## IPC Commands
+Commands are made up of a command and an option.
+Variables all start with an &.
+
+focus-workspace &workspace-right
+focus-workspace &workspace-left
+focus-workspace 1
