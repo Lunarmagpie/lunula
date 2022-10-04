@@ -6,7 +6,7 @@ use crate::window::Window;
 
 pub struct Bsp {
     tree: Node,
-    nodes: HashMap<i64, Node>, 
+    nodes: HashMap<i64, Node>,
     curr_id: i64,
 }
 
@@ -69,10 +69,10 @@ impl Node {
             }),
         }
     }
-    pub fn pop (&self, bsp: &mut Bsp, window: sync::Arc<Window>) -> Option<Node> {
+    pub fn pop(&self, bsp: &mut Bsp, window: sync::Arc<Window>) -> Option<Node> {
         match &self {
             Node::Parent { id, left, right } => None,
-            Node::Window {id, window:_} => Some(Node::Empty { id: *id }),
+            Node::Window { id, window: _ } => Some(Node::Empty { id: *id }),
             Node::Empty { id } => None,
         }
     }

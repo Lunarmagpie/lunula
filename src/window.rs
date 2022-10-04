@@ -51,11 +51,18 @@ impl Window {
             modifiers: x::ModMask::ANY,
         });
 
+        let focus_cookie = conn.send_request_checked(&x::SetInputFocus {
+            revert_to: x::InputFocus::None,
+            focus: self.window,
+            time: x::CURRENT_TIME,
+        });
+
         conn.check_request(attr_cookie)?;
         conn.check_request(save_set_cookie)?;
         conn.check_request(reparent_cookie)?;
         conn.check_request(map_cookie)?;
         conn.check_request(grab_key_cookie)?;
+        conn.check_request(focus_cookie)?;
 
         Ok(())
     }

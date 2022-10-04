@@ -83,16 +83,18 @@ pub fn run(wm: sync::Arc<sync::RwLock<WindowManager>>, conn: &xcb::Connection) -
                         conn.check_request(unselected_window_cookie)?;
                     }
                     wm.focused_window = Some(ev.event());
-
-                    if ev.event() == wm.root {
-                        continue;
-                    }
                     let selected_window_cookie =
                         conn.send_request_checked(&x::ChangeWindowAttributes {
                             window: ev.event(),
                             value_list: &[x::Cw::BorderPixel(config::BORDER_COLOR_FOCUS)],
                         });
+                    let focus_cookie = conn.send_request_checked(&x::SetInputFocus {
+                        revert_to: x::InputFocus::None,
+                        focus: ev.event(),
+                        time: x::CURRENT_TIME,
+                    });
                     conn.check_request(selected_window_cookie)?;
+                    conn.check_request(focus_cookie)?;
                 }
             }
             xcb::Event::X(x::Event::ConfigureRequest(ev)) => {
