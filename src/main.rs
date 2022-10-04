@@ -24,6 +24,9 @@ mod config {
     pub static RESIZE_BUTTON_MASK: x::KeyButMask = x::KeyButMask::BUTTON3;
 
     pub static BORDER_WIDTH: usize = 2;
+
+    pub static BORDER_COLOR: u32 = 0xcccccc;
+    pub static BORDER_COLOR_FOCUS: u32 = 0x00ccff;
 }
 
 use window_manager::WindowManager;

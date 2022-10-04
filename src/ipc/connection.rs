@@ -22,10 +22,10 @@ fn handle_client(
         Ok(_) => (),
         Err(err) => println!("{}", err),
     };
-    
+
     match handle_command(command.split_whitespace().collect(), wm, conn) {
         Ok(_) => (),
-        Err(s) => println!("{}", s)
+        Err(s) => println!("{}", s),
     };
 }
 

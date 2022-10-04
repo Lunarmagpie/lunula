@@ -6,5 +6,5 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-xcb = {version="1.1.1", features = ["xkb", "xfixes"]}
+xcb = {version="1.1.1", features = ["xkb", "xfixes", "xinput"]}
 # xkbcommon = { version = "0.3.0", features = ["x11"] }

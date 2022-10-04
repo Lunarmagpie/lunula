@@ -2,5 +2,10 @@ import socket
 import sys
 
 with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as s:
-    s.connect("/tmp/lunula-socket.socket")
-    s.sendall(' '.join(sys.argv[1:]).encode("utf-8"))
+    try:
+        s.connect("/tmp/lunula-socket.socket")
+    except:
+        print("Could not connect to ipc. Is lunula wm running?")
+        exit(1)
+    else:
+        s.sendall(' '.join(sys.argv[1:]).encode("utf-8"))

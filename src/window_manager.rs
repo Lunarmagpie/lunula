@@ -1,15 +1,15 @@
-use xcb;
 use xcb::{x, Xid};
 
 use crate::utils::Vec2D;
 use crate::virtual_desktop::DesktopManager;
-use crate::window;
+use crate::{config, window};
 use std::sync;
 
 pub struct WindowManager {
     pub desktops: DesktopManager,
     root: x::Window,
 
+    focused_window: Option<x::Window>,
     drag_start_pos: Vec2D,
     drag_start_frame_pos: Vec2D,
 }
@@ -24,7 +24,6 @@ impl WindowManager {
 
         let cookie = conn.send_request_checked(&x::ChangeWindowAttributes {
             window: root,
-
             value_list: &[
                 x::Cw::EventMask(
                     x::EventMask::SUBSTRUCTURE_NOTIFY | x::EventMask::SUBSTRUCTURE_REDIRECT,
@@ -38,12 +37,19 @@ impl WindowManager {
 
         let mut desktops = DesktopManager::new();
         desktops.create_virtual_desktop(0);
-        desktops.create_virtual_desktop(1);
+
+        let cookie = conn.send_request_checked(&x::UngrabButton {
+            grab_window: root,
+            button: x::ButtonIndex::Any,
+            modifiers: x::ModMask::ANY,
+        });
+        conn.check_request(cookie)?;
 
         Ok((
             WindowManager {
                 root,
                 desktops: desktops,
+                focused_window: None,
                 drag_start_pos: Vec2D::new(0, 0),
                 drag_start_frame_pos: Vec2D::new(0, 0),
             },
@@ -66,6 +72,28 @@ pub fn run(wm: sync::Arc<sync::RwLock<WindowManager>>, conn: &xcb::Connection) -
 
                 wm.drag_start_pos = Vec2D::new(ev.root_x(), ev.root_y());
                 wm.drag_start_frame_pos = Vec2D::new(resp.x(), resp.y());
+
+                if ev.detail() == 1 {
+                    if let Some(window) = wm.focused_window {
+                        let unselected_window_cookie =
+                            conn.send_request_checked(&x::ChangeWindowAttributes {
+                                window,
+                                value_list: &[x::Cw::BorderPixel(config::BORDER_COLOR)],
+                            });
+                        conn.check_request(unselected_window_cookie)?;
+                    }
+                    wm.focused_window = Some(ev.event());
+
+                    if ev.event() == wm.root {
+                        continue;
+                    }
+                    let selected_window_cookie =
+                        conn.send_request_checked(&x::ChangeWindowAttributes {
+                            window: ev.event(),
+                            value_list: &[x::Cw::BorderPixel(config::BORDER_COLOR_FOCUS)],
+                        });
+                    conn.check_request(selected_window_cookie)?;
+                }
             }
             xcb::Event::X(x::Event::ConfigureRequest(ev)) => {
                 let cookie = conn.send_request_checked(&x::ConfigureWindow {
@@ -83,7 +111,6 @@ pub fn run(wm: sync::Arc<sync::RwLock<WindowManager>>, conn: &xcb::Connection) -
             }
             xcb::Event::X(x::Event::MotionNotify(ev)) => {
                 let mouse_pos = Vec2D::new(ev.root_x(), ev.root_y());
-
                 if ev.state().contains(crate::config::DRAG_BUTTON_MASK) {
                     let window_pos = wm.drag_start_frame_pos + mouse_pos - wm.drag_start_pos;
 
@@ -109,13 +136,13 @@ pub fn run(wm: sync::Arc<sync::RwLock<WindowManager>>, conn: &xcb::Connection) -
                 }
             }
             xcb::Event::X(x::Event::MapRequest(ev)) => {
-                let w = window::Window::new(ev.window());
-                w.map(&conn, wm.root)?;
-                w.to_floating(&conn)?;
+                let w = sync::Arc::from(window::Window::new(ev.window()));
+                w.map(conn, wm.root)?;
+                w.to_floating(conn)?;
                 wm.desktops.add_window(w);
             }
             xcb::Event::X(x::Event::DestroyNotify(ev)) => wm.desktops.kill(ev.window()),
-            _ => {}
+            ev => {}
         }
     }
 }

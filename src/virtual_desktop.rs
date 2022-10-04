@@ -1,9 +1,9 @@
-use std::collections::HashMap;
-use xcb;
-use xcb::x;
-
 use crate::bsp::Bsp;
 use crate::window::Window;
+use std::collections::HashMap;
+use std::sync;
+use xcb;
+use xcb::x;
 
 pub struct DesktopManager {
     pub focused_desktop_id: i64,
@@ -21,14 +21,18 @@ impl DesktopManager {
         self.desktops.insert(id, VirtualDesktop::new());
     }
 
-    pub fn add_window(&mut self, window: Window) {
+    pub fn add_window(&mut self, window: sync::Arc<Window>) {
         let desktop = &mut self.desktops.get_mut(&self.focused_desktop_id).unwrap();
-        desktop.windows.push(window);
+        desktop.windows.push(window.clone());
+        desktop.layout.insert(window);
     }
 
     pub fn kill(&mut self, window: x::Window) {
         let desktop = &mut self.desktops.get_mut(&self.focused_desktop_id).unwrap();
-        desktop.windows = desktop.windows.drain_filter(|x| x.window != window).collect();
+        desktop.windows = desktop
+            .windows
+            .drain_filter(|x| x.window != window)
+            .collect();
     }
 
     pub fn next(&self, focused: i64) -> i64 {
@@ -75,8 +79,8 @@ impl DesktopManager {
 }
 
 pub struct VirtualDesktop {
-    windows: Vec<Window>,
-    layout: Bsp,
+    windows: Vec<sync::Arc<Window>>,
+    pub layout: Bsp,
 }
 
 impl VirtualDesktop {

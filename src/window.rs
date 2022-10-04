@@ -1,5 +1,7 @@
 use xcb::x;
 
+use crate::config;
+
 // Window that is tracked by the window manager
 pub struct Window {
     pub window: x::Window,
@@ -14,7 +16,7 @@ impl Window {
         let attr_cookie = conn.send_request_checked(&x::ChangeWindowAttributes {
             window: self.window,
             value_list: &[
-                x::Cw::BorderPixel(0x0000ff),
+                x::Cw::BorderPixel(config::BORDER_COLOR),
                 x::Cw::EventMask(
                     x::EventMask::SUBSTRUCTURE_NOTIFY | x::EventMask::SUBSTRUCTURE_REDIRECT,
                 ),
@@ -37,10 +39,24 @@ impl Window {
             window: self.window,
         });
 
+        let grab_key_cookie = conn.send_request_checked(&x::GrabButton {
+            owner_events: false,
+            grab_window: self.window,
+            event_mask: x::EventMask::BUTTON_PRESS,
+            pointer_mode: x::GrabMode::Async,
+            keyboard_mode: x::GrabMode::Async,
+            confine_to: xcb::Xid::none(),
+            cursor: xcb::Xid::none(),
+            button: x::ButtonIndex::Any,
+            modifiers: x::ModMask::ANY,
+        });
+
         conn.check_request(attr_cookie)?;
         conn.check_request(save_set_cookie)?;
         conn.check_request(reparent_cookie)?;
         conn.check_request(map_cookie)?;
+        conn.check_request(grab_key_cookie)?;
+
         Ok(())
     }
 
