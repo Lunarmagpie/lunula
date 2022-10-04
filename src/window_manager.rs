@@ -155,7 +155,7 @@ pub fn run(wm: sync::Arc<sync::RwLock<WindowManager>>, conn: &xcb::Connection) -
                 wm.desktops.add_window(w);
             }
             xcb::Event::X(x::Event::DestroyNotify(ev)) => wm.desktops.kill(ev.window()),
-            ev => {}
+            _ => {}
         }
     }
 }
