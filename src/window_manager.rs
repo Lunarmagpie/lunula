@@ -97,6 +97,17 @@ pub fn run(wm: sync::Arc<sync::RwLock<WindowManager>>, conn: &xcb::Connection) -
                     conn.check_request(focus_cookie)?;
                 }
             }
+            xcb::Event::X(x::Event::KeyPress(ev)) => {
+                if ev.detail() == 36 {
+                    use std::process::Command;
+                    println!("here1");
+
+                    Command::new("alacritty")
+                        .spawn()
+                        .expect("failed to execute process");
+                    println!("here");
+                }
+            }
             xcb::Event::X(x::Event::ConfigureRequest(ev)) => {
                 let cookie = conn.send_request_checked(&x::ConfigureWindow {
                     window: ev.window(),
