@@ -7,7 +7,7 @@ use xcb::x;
 
 pub struct DesktopManager {
     pub focused_desktop_id: i64,
-    desktops: HashMap<i64, VirtualDesktop>,
+    pub desktops: HashMap<i64, VirtualDesktop>,
 }
 
 impl DesktopManager {
@@ -28,7 +28,7 @@ impl DesktopManager {
     }
 
     pub fn kill(&mut self, window: x::Window) {
-        let desktop = &mut self.desktops.get_mut(&self.focused_desktop_id).unwrap();
+        let desktop = self.desktops.get_mut(&self.focused_desktop_id).unwrap();
         desktop.windows = desktop
             .windows
             .drain_filter(|x| x.window != window)

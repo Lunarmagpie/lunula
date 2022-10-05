@@ -16,19 +16,32 @@ pub fn handle_command(
 
     match &**command_t {
         "focus-workspace" => {
-            let id: i64 = command.iter().nth(1).unwrap().parse().unwrap();
+            let id: i64 = match command.iter().nth(1) {
+                Some(number) => {
+                    match number.parse() {
+                        Ok(n) => n,
+                        Err(e) => return Err(e.to_string())
+                    }
+                }
+                None => return Err("Not enough arguments provided".to_string())
+            };
             wm.desktops.focus(id, conn)
         }
         "kill-window" => {
-            // let id: i64 = command.iter().nth(1).unwrap().parse().unwrap();
-
             if let Some(window) = wm.focused_window {
+                if window.resource_id() == wm.root.resource_id() {
+                    return Err("Could not close window because no window is selected.".to_string());
+                }
+
                 let cookie  =conn.send_request_checked(&x::DestroyWindow {
                     window
                 });
                 wm.focused_window = None;
                 conn.check_request(cookie).unwrap();
             }
+        }
+        "query" => {
+            println!("{}", wm.desktops.focused_desktop_id)
         }
 
         _ => return Err(format!("{} is not a command", command_t)),

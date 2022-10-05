@@ -53,7 +53,7 @@ impl Window {
         // });
 
         let focus_cookie = conn.send_request_checked(&x::SetInputFocus {
-            revert_to: x::InputFocus::None,
+            revert_to: x::InputFocus::PointerRoot,
             focus: self.window,
             time: x::CURRENT_TIME,
         });

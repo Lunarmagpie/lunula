@@ -7,7 +7,7 @@ use std::sync;
 
 pub struct WindowManager {
     pub desktops: DesktopManager,
-    root: x::Window,
+    pub root: x::Window,
 
     pub focused_window: Option<x::Window>,
     drag_start_pos: Vec2D,
@@ -41,12 +41,12 @@ impl WindowManager {
         desktops.create_virtual_desktop(2);
         desktops.create_virtual_desktop(3);
 
-        // let cookie = conn.send_request_checked(&x::UngrabButton {
-        //     grab_window: root,
-        //     button: x::ButtonIndex::Any,
-        //     modifiers: x::ModMask::ANY,
-        // });
-        // conn.check_request(cookie)?;
+        let cookie = conn.send_request_checked(&x::UngrabButton {
+            grab_window: root,
+            button: x::ButtonIndex::Any,
+            modifiers: x::ModMask::ANY,
+        });
+        conn.check_request(cookie)?;
 
         Ok((
             WindowManager {
@@ -66,7 +66,6 @@ pub fn run(wm: sync::Arc<sync::RwLock<WindowManager>>, conn: &xcb::Connection) -
         let event = conn.wait_for_event()?;
         let mut wm = wm.write().unwrap();
         log::debug!("{:?}", event);
-        println!("{:?}", event);
         match event {
             xcb::Event::X(x::Event::ButtonPress(ev)) => {
                 let cookie = conn.send_request(&x::GetGeometry {
@@ -93,13 +92,7 @@ pub fn run(wm: sync::Arc<sync::RwLock<WindowManager>>, conn: &xcb::Connection) -
                             window: ev.event(),
                             value_list: &[x::Cw::BorderPixel(config::BORDER_COLOR_FOCUS)],
                         });
-                    let focus_cookie = conn.send_request_checked(&x::SetInputFocus {
-                        revert_to: x::InputFocus::PointerRoot,
-                        focus: ev.event(),
-                        time: x::CURRENT_TIME,
-                    });
                     conn.check_request(selected_window_cookie)?;
-                    conn.check_request(focus_cookie)?;
                 }
             }
             xcb::Event::X(x::Event::ConfigureRequest(ev)) => {

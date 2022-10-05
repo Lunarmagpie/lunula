@@ -54,7 +54,8 @@ fn main() -> xcb::Result<()> {
     .expect("failed to execute process");
 
     log_panics::init();
-    simple_logging::log_to_file("/home/lunar/.lunula.log", log::LevelFilter::max()).unwrap();
+    // simple_logging::log_to_file("/home/lunar/.lunula.log", log::LevelFilter::max()).unwrap();
+    simple_logging::log_to(std::io::stdout(), log::LevelFilter::max());
 
     loop {
         match window_manager::run(wm.clone(), &*conn) {
