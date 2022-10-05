@@ -7,4 +7,7 @@ edition = "2021"
 
 [dependencies]
 xcb = {version="1.1.1", features = ["xkb", "xfixes", "xinput"]}
-# xkbcommon = { version = "0.3.0", features = ["x11"] }
+expanduser = "*"
+log = "0.4.17"
+simple-logging = "^2.0.2"
+log-panics = "*"

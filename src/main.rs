@@ -8,14 +8,18 @@ mod virtual_desktop;
 mod window;
 mod window_manager;
 
+use expanduser;
+use log_panics;
+use simple_logging;
+use std::process;
 use std::sync;
 use std::thread;
 
 mod config {
     use xcb::x;
 
-    pub static MOD_KEY: x::ModMask = x::ModMask::N1; // Alt
-                                                     // pub static MOD_KEY: x::ModMask = x::ModMask::N4; // Mod
+    // pub static MOD_KEY: x::ModMask = x::ModMask::N1; // Alt
+    pub static MOD_KEY: x::ModMask = x::ModMask::N4; // Mod
 
     pub static DRAG_BUTTON: x::ButtonIndex = x::ButtonIndex::N1; // Left Mouse Button
     pub static DRAG_BUTTON_MASK: x::KeyButMask = x::KeyButMask::BUTTON1;
@@ -43,5 +47,19 @@ fn main() -> xcb::Result<()> {
 
     println!("Starting Lunula!");
 
-    window_manager::run(wm, &*conn)
+    process::Command::new(
+        expanduser::expanduser("~/.config/lunularc").expect("Could not find user home directory."),
+    )
+    .spawn()
+    .expect("failed to execute process");
+
+    log_panics::init();
+    simple_logging::log_to_file("/home/lunar/.lunula.log", log::LevelFilter::max()).unwrap();
+
+    loop {
+        match window_manager::run(wm.clone(), &*conn) {
+            Ok(()) => (),
+            Err(err) => log::error!("{}", err.to_string()),
+        };
+    }
 }

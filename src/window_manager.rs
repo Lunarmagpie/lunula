@@ -9,7 +9,7 @@ pub struct WindowManager {
     pub desktops: DesktopManager,
     root: x::Window,
 
-    focused_window: Option<x::Window>,
+    pub focused_window: Option<x::Window>,
     drag_start_pos: Vec2D,
     drag_start_frame_pos: Vec2D,
 }
@@ -37,13 +37,16 @@ impl WindowManager {
 
         let mut desktops = DesktopManager::new();
         desktops.create_virtual_desktop(0);
+        desktops.create_virtual_desktop(1);
+        desktops.create_virtual_desktop(2);
+        desktops.create_virtual_desktop(3);
 
-        let cookie = conn.send_request_checked(&x::UngrabButton {
-            grab_window: root,
-            button: x::ButtonIndex::Any,
-            modifiers: x::ModMask::ANY,
-        });
-        conn.check_request(cookie)?;
+        // let cookie = conn.send_request_checked(&x::UngrabButton {
+        //     grab_window: root,
+        //     button: x::ButtonIndex::Any,
+        //     modifiers: x::ModMask::ANY,
+        // });
+        // conn.check_request(cookie)?;
 
         Ok((
             WindowManager {
@@ -62,6 +65,8 @@ pub fn run(wm: sync::Arc<sync::RwLock<WindowManager>>, conn: &xcb::Connection) -
     loop {
         let event = conn.wait_for_event()?;
         let mut wm = wm.write().unwrap();
+        log::debug!("{:?}", event);
+        println!("{:?}", event);
         match event {
             xcb::Event::X(x::Event::ButtonPress(ev)) => {
                 let cookie = conn.send_request(&x::GetGeometry {
@@ -89,23 +94,12 @@ pub fn run(wm: sync::Arc<sync::RwLock<WindowManager>>, conn: &xcb::Connection) -
                             value_list: &[x::Cw::BorderPixel(config::BORDER_COLOR_FOCUS)],
                         });
                     let focus_cookie = conn.send_request_checked(&x::SetInputFocus {
-                        revert_to: x::InputFocus::None,
+                        revert_to: x::InputFocus::PointerRoot,
                         focus: ev.event(),
                         time: x::CURRENT_TIME,
                     });
                     conn.check_request(selected_window_cookie)?;
                     conn.check_request(focus_cookie)?;
-                }
-            }
-            xcb::Event::X(x::Event::KeyPress(ev)) => {
-                if ev.detail() == 36 {
-                    use std::process::Command;
-                    println!("here1");
-
-                    Command::new("alacritty")
-                        .spawn()
-                        .expect("failed to execute process");
-                    println!("here");
                 }
             }
             xcb::Event::X(x::Event::ConfigureRequest(ev)) => {
@@ -154,7 +148,17 @@ pub fn run(wm: sync::Arc<sync::RwLock<WindowManager>>, conn: &xcb::Connection) -
                 w.to_floating(conn)?;
                 wm.desktops.add_window(w);
             }
-            xcb::Event::X(x::Event::DestroyNotify(ev)) => wm.desktops.kill(ev.window()),
+            xcb::Event::X(x::Event::UnmapNotify(ev)) => {
+                if wm.focused_window == Some(ev.event()) {
+                    wm.focused_window = None
+                }
+            }
+            xcb::Event::X(x::Event::DestroyNotify(ev)) => {
+                if wm.focused_window == Some(ev.event()) {
+                    wm.focused_window = None
+                }
+                wm.desktops.kill(ev.window());
+            }
             _ => {}
         }
     }

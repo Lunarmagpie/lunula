@@ -17,4 +17,7 @@ Variables all start with an &.
 focus-workspace &workspace-right
 focus-workspace &workspace-left
 focus-workspace 1
+
+
+kill-window &window-selected
 ```

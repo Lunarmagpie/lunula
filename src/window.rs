@@ -39,28 +39,18 @@ impl Window {
             window: self.window,
         });
 
-        let grab_button_cookie = conn.send_request_checked(&x::GrabButton {
-            owner_events: false,
-            grab_window: self.window,
-            event_mask: x::EventMask::BUTTON_PRESS,
-            pointer_mode: x::GrabMode::Async,
-            keyboard_mode: x::GrabMode::Async,
-            confine_to: xcb::Xid::none(),
-            cursor: xcb::Xid::none(),
-            button: x::ButtonIndex::Any,
-            modifiers: x::ModMask::ANY,
-        });
 
-
-        let grab_key_cookie = conn.send_request_checked(&x::GrabKey {
-            owner_events: false,
-            grab_window: self.window,
-            pointer_mode: x::GrabMode::Async,
-            keyboard_mode: x::GrabMode::Async,
-            modifiers: config::MOD_KEY,
-            key: 36,
-        });
-
+        // let grab_button_cookie = conn.send_request_checked(&x::GrabButton {
+        //     owner_events: false,
+        //     grab_window: self.window,
+        //     event_mask: x::EventMask::BUTTON_PRESS,
+        //     pointer_mode: x::GrabMode::Async,
+        //     keyboard_mode: x::GrabMode::Async,
+        //     confine_to: xcb::Xid::none(),
+        //     cursor: xcb::Xid::none(),
+        //     button: x::ButtonIndex::Any,
+        //     modifiers: x::ModMask::ANY,
+        // });
 
         let focus_cookie = conn.send_request_checked(&x::SetInputFocus {
             revert_to: x::InputFocus::None,
@@ -72,8 +62,7 @@ impl Window {
         conn.check_request(save_set_cookie)?;
         conn.check_request(reparent_cookie)?;
         conn.check_request(map_cookie)?;
-        conn.check_request(grab_button_cookie)?;
-        conn.check_request(grab_key_cookie)?;
+        // conn.check_request(grab_button_cookie)?;
         conn.check_request(focus_cookie)?;
 
         Ok(())

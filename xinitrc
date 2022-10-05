@@ -25,6 +25,6 @@
 # xclock &
 # xeyes &
 # xterm &
-alacritty &
+# alacritty &
 # 2. Start our window manager.
 exec "target/debug/lunula"
