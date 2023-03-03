@@ -19,7 +19,7 @@ pub fn handle_command(
             let id: i64 = match command.iter().nth(1) {
                 Some(number) => match number.parse() {
                     Ok(n) => {
-                        wm.unfocus(conn).unwrap();
+                        wm.unfocus(conn).or(Err("Window could not be unfocused".to_string()))?;
                         n
                     }
                     Err(e) => return Err(e.to_string()),
@@ -35,8 +35,8 @@ pub fn handle_command(
                 }
 
                 let cookie = conn.send_request_checked(&x::DestroyWindow { window });
-                wm.unfocus(conn).unwrap();
-                conn.check_request(cookie).unwrap();
+                wm.unfocus(conn).or(Err("Window could not be unfocused".to_string()))?;
+                conn.check_request(cookie).or(Err("Window could not be destroyed".to_string()))?;
             }
         }
         "query" => {

@@ -80,8 +80,16 @@ impl WindowManager {
 pub fn run(wm: sync::Arc<sync::RwLock<WindowManager>>, conn: &xcb::Connection) -> xcb::Result<()> {
     loop {
         let event = conn.wait_for_event()?;
-        let mut wm = wm.write().unwrap();
+        let mut wm = match wm.write() {
+            Ok(wm) => wm,
+            Err(_) => {
+                log::error!("Could not aquire WindowManager. This is a little weird...");
+                continue;
+            }
+        };
+
         log::debug!("{:?}", event);
+
         match event {
             xcb::Event::X(x::Event::ButtonPress(ev)) => {
                 let cookie = conn.send_request(&x::GetGeometry {
