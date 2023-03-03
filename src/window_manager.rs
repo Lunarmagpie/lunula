@@ -26,7 +26,10 @@ impl WindowManager {
             window: root,
             value_list: &[
                 x::Cw::EventMask(
-                    x::EventMask::SUBSTRUCTURE_NOTIFY | x::EventMask::SUBSTRUCTURE_REDIRECT,
+                    x::EventMask::SUBSTRUCTURE_NOTIFY
+                        | x::EventMask::SUBSTRUCTURE_REDIRECT
+                        | x::EventMask::BUTTON_PRESS
+                        | x::EventMask::BUTTON_RELEASE,
                 ),
                 x::Cw::Cursor(Xid::none()),
             ],
@@ -59,6 +62,19 @@ impl WindowManager {
             conn,
         ))
     }
+
+    pub fn unfocus(&mut self, conn: &xcb::Connection) -> xcb::Result<()> {
+        if let Some(_) = self.focused_window {
+            let focus_cookie = conn.send_request_checked(&x::SetInputFocus {
+                revert_to: x::InputFocus::PointerRoot,
+                focus: self.root,
+                time: x::CURRENT_TIME,
+            });
+            self.focused_window = None;
+            conn.check_request(focus_cookie)?;
+        }
+        Ok(())
+    }
 }
 
 pub fn run(wm: sync::Arc<sync::RwLock<WindowManager>>, conn: &xcb::Connection) -> xcb::Result<()> {
@@ -87,12 +103,19 @@ pub fn run(wm: sync::Arc<sync::RwLock<WindowManager>>, conn: &xcb::Connection) -
                         conn.check_request(unselected_window_cookie)?;
                     }
                     wm.focused_window = Some(ev.event());
+
                     let selected_window_cookie =
                         conn.send_request_checked(&x::ChangeWindowAttributes {
                             window: ev.event(),
                             value_list: &[x::Cw::BorderPixel(config::BORDER_COLOR_FOCUS)],
                         });
+                    let focus_cookie = conn.send_request_checked(&x::SetInputFocus {
+                        revert_to: x::InputFocus::PointerRoot,
+                        focus: ev.event(),
+                        time: x::CURRENT_TIME,
+                    });
                     conn.check_request(selected_window_cookie)?;
+                    conn.check_request(focus_cookie)?;
                 }
             }
             xcb::Event::X(x::Event::ConfigureRequest(ev)) => {
@@ -111,6 +134,10 @@ pub fn run(wm: sync::Arc<sync::RwLock<WindowManager>>, conn: &xcb::Connection) -
             }
             xcb::Event::X(x::Event::MotionNotify(ev)) => {
                 let mouse_pos = Vec2D::new(ev.root_x(), ev.root_y());
+                if !ev.state().contains(crate::config::MOD_KEY_BUT) {
+                    continue;
+                }
+
                 if ev.state().contains(crate::config::DRAG_BUTTON_MASK) {
                     let window_pos = wm.drag_start_frame_pos + mouse_pos - wm.drag_start_pos;
 

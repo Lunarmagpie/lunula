@@ -14,16 +14,17 @@ pub fn handle_command(
         None => return Err("Could not find argument type.".to_string()),
     };
 
-    match &**command_t {
+    match command_t.as_str() {
         "focus-workspace" => {
             let id: i64 = match command.iter().nth(1) {
-                Some(number) => {
-                    match number.parse() {
-                        Ok(n) => n,
-                        Err(e) => return Err(e.to_string())
+                Some(number) => match number.parse() {
+                    Ok(n) => {
+                        wm.unfocus(conn).unwrap();
+                        n
                     }
-                }
-                None => return Err("Not enough arguments provided".to_string())
+                    Err(e) => return Err(e.to_string()),
+                },
+                None => return Err("Not enough arguments provided".to_string()),
             };
             wm.desktops.focus(id, conn)
         }
@@ -33,10 +34,8 @@ pub fn handle_command(
                     return Err("Could not close window because no window is selected.".to_string());
                 }
 
-                let cookie  =conn.send_request_checked(&x::DestroyWindow {
-                    window
-                });
-                wm.focused_window = None;
+                let cookie = conn.send_request_checked(&x::DestroyWindow { window });
+                wm.unfocus(conn).unwrap();
                 conn.check_request(cookie).unwrap();
             }
         }

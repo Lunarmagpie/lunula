@@ -39,22 +39,26 @@ impl Window {
             window: self.window,
         });
 
-
-        // let grab_button_cookie = conn.send_request_checked(&x::GrabButton {
-        //     owner_events: false,
-        //     grab_window: self.window,
-        //     event_mask: x::EventMask::BUTTON_PRESS,
-        //     pointer_mode: x::GrabMode::Async,
-        //     keyboard_mode: x::GrabMode::Async,
-        //     confine_to: xcb::Xid::none(),
-        //     cursor: xcb::Xid::none(),
-        //     button: x::ButtonIndex::Any,
-        //     modifiers: x::ModMask::ANY,
-        // });
-
         let focus_cookie = conn.send_request_checked(&x::SetInputFocus {
             revert_to: x::InputFocus::PointerRoot,
             focus: self.window,
+            time: x::CURRENT_TIME,
+        });
+
+        let button_cookie = conn.send_request_checked(&x::GrabButton {
+            owner_events: true,
+            grab_window: self.window,
+            event_mask: x::EventMask::BUTTON_PRESS | x::EventMask::BUTTON_RELEASE,
+            pointer_mode: x::GrabMode::Async,
+            keyboard_mode: x::GrabMode::Async,
+            confine_to: xcb::Xid::none(),
+            cursor: xcb::Xid::none(),
+            button: crate::config::SELECT_BUTTON,
+            modifiers: x::ModMask::ANY,
+        });
+
+        let allow_events_cookie = conn.send_request_checked(&x::AllowEvents {
+            mode: x::Allow::AsyncPointer,
             time: x::CURRENT_TIME,
         });
 
@@ -62,8 +66,9 @@ impl Window {
         conn.check_request(save_set_cookie)?;
         conn.check_request(reparent_cookie)?;
         conn.check_request(map_cookie)?;
-        // conn.check_request(grab_button_cookie)?;
         conn.check_request(focus_cookie)?;
+        conn.check_request(button_cookie)?;
+        conn.check_request(allow_events_cookie)?;
 
         Ok(())
     }
