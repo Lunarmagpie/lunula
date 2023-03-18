@@ -54,7 +54,7 @@ impl Window {
             confine_to: xcb::Xid::none(),
             cursor: xcb::Xid::none(),
             button: crate::config::SELECT_BUTTON,
-            modifiers: x::ModMask::ANY,
+            modifiers: crate::config::MOD_KEY,
         });
 
         let allow_events_cookie = conn.send_request_checked(&x::AllowEvents {
